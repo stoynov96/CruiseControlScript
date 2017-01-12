@@ -2,6 +2,8 @@ const string INCREASE_SPEED_ARGUMENT = "+speed";
 const string DECREASE_SPEED_ARGUMENT = "-speed"; 
 const string TOGGLE_CRUISE_ARGUMENT = "-toggleCruise";
 const string PRECISION_MODE_ARGUMENT = "-precisionMode";
+const string POLARIZE_SPEED_ARGUMENT = "-polarizeSpeed";	//This argument goes to either pole (0 or max speed),
+									//depending on which one the current target speed is farthest away from
 
 const string DEBUG_PANEL_NAME = "[DEBUG] Text Panel";
 const string STATUS_PANEL_NAME = "[1] Text panel L";
@@ -14,7 +16,7 @@ const float MAX_SPEED = 100.0F; 		//The maximum speed of the world the script is
 const float MAX_SPEED_DEVIATION = 0.5F; //The maximum deviation that the script will allow between the 
                                                                             //target speed and the actual speed 
 const float PRECISION_FACTOR = 0.2F;	//DO NOT SET TO ZERO
-				//The precision of factor determines how much slower speed control is under precision mode. 0.1 means 10 times slower
+				//The precision factor determines how much slower speed control is under precision mode. 0.1 means 10 times slower
 const string FORWARD_THRUSTERS_TAG = "(Forward)"; 
 const string BACKWARD_THRUSTERS_TAG = "(Backward)"; 
  
@@ -49,6 +51,9 @@ public void Main(string argument) {
 	}
 	if(!gIsCruising) return;
 
+	if(argument == POLARIZE_SPEED_ARGUMENT) {
+		PolarizeSpeed();
+	}
 	if(argument == PRECISION_MODE_ARGUMENT) {
 		TogglePrecision();
 	}
@@ -132,7 +137,13 @@ Overrides thrusters if doOverride = true, and removes override otherwise. Only o
 		thrusters[i].SetCustomName("[F]" + thrusters[i].CustomName); //debug
 	}
 }
- 
+
+void PolarizeSpeed() {
+	if(MAX_SPEED > 2.0F * gTargetSpeed) {	//If the target speed is currently closer to 0 than to MAX_SPEED
+		gTargetSpeed = MAX_SPEED;
+	}
+	else gTargetSpeed = 0.0F;
+}
 void increaseTargetSpeed() { 
 	if(gTargetSpeedChangePerSecond == 0.0F) {	//If the target speed is currently not being changed. In this case, this function should start increasing it
 		gTargetSpeedChangePerSecond = TARGET_SPEED_INCREMENT_PER_SECOND;
@@ -141,7 +152,6 @@ void increaseTargetSpeed() {
 	else if(gTargetSpeedChangePerSecond > 0.0) {	//If the target speed is currently being changed. In this case, this function should stop increasing it
 		gTargetSpeedChangePerSecond = 0.0F;
 	}
-	
 } 
 void decreaseTargetSpeed(float speedDecrement = -1.0F) {
 	if(gTargetSpeedChangePerSecond == 0.0F) {	//If the target speed is currently not being changed. In this case, this function should start increasing it
@@ -163,6 +173,7 @@ void TogglePrecision() {
 	if(gPrecisionMode) gTargetSpeedChangePerSecond *= PRECISION_FACTOR;
 	else gTargetSpeedChangePerSecond /= PRECISION_FACTOR;
 }
+
 void toggleCruise() {
 	gIsCruising = !gIsCruising;
 
@@ -182,8 +193,6 @@ void toggleCruise() {
 		gStatusTextPanel.WritePublicText("Cruise control OFF");
 	}
 }
-
-
 void doAccelerate() { 
     List <IMyThrust> forwardThrusters = new List<IMyThrust>();
     GridTerminalSystem.GetBlocksOfType<IMyThrust>(forwardThrusters, (block) => 
