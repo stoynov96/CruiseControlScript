@@ -11,7 +11,7 @@ const string CONTROLLING_TIMER_NAME = "[1] Timer Cruise Control";	//name of the 
 
 const short DEF_DECIMAL_PLACES = 2;
 const float TARGET_SPEED_INCREMENT_PER_SECOND = 20.0F;	//The rate at which target speed is changed
-const float MAX_SPEED = 100.0F; 		//The maximum speed of the world the script is going to be used in
+const float MAX_SPEED = 100.0F; 	//DO NOT SET TO 0! The maximum speed of the world the script is going to be used in
 								//(Or the maximum speed the user wants the ship to move with)
 const float MAX_SPEED_DEVIATION = 0.5F; //The maximum deviation that the script will allow between the 
                                                                             //target speed and the actual speed 
@@ -81,12 +81,11 @@ public void Main(string argument) {
     }
  
     //===WRITING TO TEXT PANEL===  
-    string textToWrite = "CurrentSpeed: " + Math.Round(gCurrentSpeed,1).ToString() + "\n"; 
-    textToWrite += "TargetSpeed: " + Math.Round(gTargetSpeed,1).ToString() + "\n";
-    if(gPrecisionMode) textToWrite += "Precision Mode...\n";
-    gStatusTextPanel.WritePublicText(textToWrite);
-
-} 
+	string textToWrite = gCurrentSpeed.ToString("00.0") + " / " + gTargetSpeed.ToString("00.0") + " (m/s)\n";
+	if(gPrecisionMode) textToWrite += "Precision Mode...\n";
+	gStatusTextPanel.WritePublicText(textToWrite);
+	gStatusTextPanel.WritePublicText(GUI_GetSpeedBar(20), true);
+}
 
 
 
@@ -233,4 +232,52 @@ If the speed drops too much, the script will call doAccelerate()
 
     gStatusTextPanel.WritePublicText("\nCruising\n",true);
     gCurrentAcceleration = 0; 
+}
+
+string GUI_GetSpeedBar(int barLength) {
+	const string EMPTY_FIELD = " ";
+	const string TARGET_SPEED_CHAR = "|";
+	const string CURRENT_SPEED_CHAR = "-";
+
+	string speedBar = "[";
+
+	float targetSpeedCoefficient;	//The target speed as a percentage of the max speed
+	float currentSpeedCoefficient;	//The current speed as a percentage of the max speed
+	targetSpeedCoefficient = gTargetSpeed / MAX_SPEED;
+	currentSpeedCoefficient = gCurrentSpeed / MAX_SPEED;
+
+	int targetSpeedPosition;	//The position of the bar marking the target speed
+	int currentSpeedLength;		//The length of the line marking the current speed
+	targetSpeedPosition = (int) Math.Round(barLength * targetSpeedCoefficient, 0);
+	currentSpeedLength = (int) Math.Round(barLength * currentSpeedCoefficient, 0);
+
+	if(targetSpeedPosition > currentSpeedLength) {
+		for(int i = 0; i < currentSpeedLength; i++)
+			speedBar += CURRENT_SPEED_CHAR;
+		for(int i = currentSpeedLength; i < targetSpeedPosition; i++)
+			speedBar += EMPTY_FIELD;
+		speedBar += TARGET_SPEED_CHAR;
+		for(int i = targetSpeedPosition; i < barLength; i++)
+			 speedBar += EMPTY_FIELD;
+	}
+	else if(targetSpeedPosition == currentSpeedLength) {
+		for(int i = 0; i < currentSpeedLength; i++)
+			speedBar += CURRENT_SPEED_CHAR;
+		speedBar += TARGET_SPEED_CHAR;
+		for(int i = targetSpeedPosition; i < barLength; i++)
+			 speedBar += EMPTY_FIELD;
+	}
+	else if(targetSpeedPosition < currentSpeedLength) {
+		for(int i = 0; i < targetSpeedPosition; i++)
+			speedBar += CURRENT_SPEED_CHAR;
+		speedBar += TARGET_SPEED_CHAR;
+		for(int i = targetSpeedPosition; i < currentSpeedLength; i++)
+			speedBar += CURRENT_SPEED_CHAR;
+		for(int i = currentSpeedLength; i < barLength; i++)
+			 speedBar += EMPTY_FIELD;
+	}
+
+	speedBar += "]";
+
+	return speedBar;
 }
