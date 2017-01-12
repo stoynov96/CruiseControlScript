@@ -13,12 +13,17 @@ const short DEF_DECIMAL_PLACES = 2;
 const float TARGET_SPEED_INCREMENT_PER_SECOND = 20.0F;	//The rate at which target speed is changed
 const float MAX_SPEED = 100.0F; 	//DO NOT SET TO 0! The maximum speed of the world the script is going to be used in
 								//(Or the maximum speed the user wants the ship to move with)
-const float MAX_SPEED_DEVIATION = 0.5F; //The maximum deviation that the script will allow between the 
+const float MAX_SPEED_DEVIATION = 0.2F; //The maximum deviation that the script will allow between the 
                                                                             //target speed and the actual speed 
 const float PRECISION_FACTOR = 0.2F;	//DO NOT SET TO ZERO
 				//The precision factor determines how much slower speed control is under precision mode. 0.1 means 10 times slower
 const string FORWARD_THRUSTERS_TAG = "(Forward)"; 
 const string BACKWARD_THRUSTERS_TAG = "(Backward)"; 
+
+//===COLORS===
+Color Violet = new Color (190,200,255);
+Color LightBlue = new Color (200,255,255);
+
  
 Vector3D gGlobalGridPosition = new Vector3D(0,0,0); 
 float gCurrentSpeed = 0.0F;  
@@ -66,25 +71,26 @@ public void Main(string argument) {
 
 	UpdateTargetSpeed();
     gCurrentSpeed = (float) getCurrentSpeed(DEF_DECIMAL_PLACES);  
+    if(gCurrentSpeed > MAX_SPEED) gCurrentSpeed = MAX_SPEED;
+    if(gTargetSpeed > MAX_SPEED) gTargetSpeed = MAX_SPEED;
  
-    //===ALLIGNING THE CURRENT SPEED TO THE TARGET SPEED=== 
-    if (Math.Abs(gCurrentSpeed - gTargetSpeed) > 0.1) { 
-        if (gCurrentSpeed < gTargetSpeed && gCurrentAcceleration != 1) { 
-            doAccelerate(); 
-        } 
-        if (gCurrentSpeed > gTargetSpeed && gCurrentAcceleration != -1) { 
-            doDecelerate(); 
-        } 
-    } 
+    //===ALLIGNING THE CURRENT SPEED TO THE TARGET SPEED===
+    if( Math.Abs(gTargetSpeed - gCurrentSpeed) > MAX_SPEED_DEVIATION) {
+    	if ( (gTargetSpeed - gCurrentSpeed > MAX_SPEED_DEVIATION) && gCurrentAcceleration != 1) { 
+			doAccelerate(); 
+		} 
+		else if ( (gCurrentSpeed - gTargetSpeed > (MAX_SPEED_DEVIATION * 2) ) && gCurrentAcceleration != -1) { 
+			doDecelerate(); 
+		}
+	}
     else if(gCurrentAcceleration != 0) {
     	doCruise();
     }
  
     //===WRITING TO TEXT PANEL===  
-	string textToWrite = gCurrentSpeed.ToString("00.0") + " / " + gTargetSpeed.ToString("00.0") + " (m/s)\n";
-	if(gPrecisionMode) textToWrite += "Precision Mode...\n";
-	gStatusTextPanel.WritePublicText(textToWrite);
-	gStatusTextPanel.WritePublicText(GUI_GetSpeedBar(20), true);
+	gStatusTextPanel.WritePublicText(gCurrentSpeed.ToString("00.0") + " / " + gTargetSpeed.ToString("00.0") + " (m/s)\n");
+	gStatusTextPanel.WritePublicText(GUI_GetSpeedBar(20) + "\n", true);
+	if(gPrecisionMode) gStatusTextPanel.WritePublicText("Precision Mode...\n", true);
 }
 
 
@@ -169,8 +175,14 @@ void UpdateTargetSpeed() {
 }
 void TogglePrecision() {
 	gPrecisionMode = !gPrecisionMode;
-	if(gPrecisionMode) gTargetSpeedChangePerSecond *= PRECISION_FACTOR;
-	else gTargetSpeedChangePerSecond /= PRECISION_FACTOR;
+	if(gPrecisionMode) {
+		gTargetSpeedChangePerSecond *= PRECISION_FACTOR;
+		gStatusTextPanel.SetValue("FontColor", Violet);	//Changing the color of the LCD panel text to indicate precision mode
+	}
+	else {
+		gTargetSpeedChangePerSecond /= PRECISION_FACTOR;
+		gStatusTextPanel.SetValue("FontColor", LightBlue);	//Changing the color of the LCD panel text to indicate normal mode
+	}
 }
 
 void toggleCruise() {
