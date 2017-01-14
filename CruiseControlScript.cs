@@ -5,6 +5,7 @@ const string PRECISION_MODE_ARGUMENT = "-precisionMode";
 const string POLARIZE_SPEED_ARGUMENT = "-polarizeSpeed";	//This argument goes to either pole (0 or max speed),
 									//depending on which one the current target speed is farthest away from
 
+const string CONTROL_BLOCK_NAME = "[1] Main Cockpit";
 const string DEBUG_PANEL_NAME = "[DEBUG] Text Panel";
 const string STATUS_PANEL_NAME = "[1] Text panel L";
 const string CONTROLLING_TIMER_NAME = "[1] Timer Cruise Control";	//name of the timer that runs this programmable block and triggers itself
@@ -30,10 +31,11 @@ float gCurrentSpeed = 0.0F;
 float gTargetSpeed;   //The speed which the ship is supposed to cruise with. 
 float gTargetSpeedChangePerSecond = 0.0F;	//Current rate of change of the target speed per second
 short gCurrentAcceleration = 0;  // State of acceleration (-1 to decelerate, 1 to accelerate, 0 for neither) 
-bool gIsCruising = false;	//true if in cruise mode. False otherwise
+bool gIsCruising = true;	//true if in cruise mode. False otherwise
 bool gPrecisionMode = false;	//true if precision mode is on. Precision mode allows for a precise speed control
 IMyTextPanel gStatusTextPanel;
 IMyTimerBlock gControlTimer;
+IMyShipController gMainControllerBlock;
 
 //Debug variables
 IMyTextPanel gDebugTextPanel;
@@ -46,6 +48,8 @@ public Program() {
     //===GETTING BLOCKS THAT WILL BE USED IN THE SCRIPT===
     gStatusTextPanel = (IMyTextPanel) GridTerminalSystem.GetBlockWithName(STATUS_PANEL_NAME);
     gControlTimer = (IMyTimerBlock) GridTerminalSystem.GetBlockWithName(CONTROLLING_TIMER_NAME);
+
+    gMainControllerBlock = (IMyShipController) GridTerminalSystem.GetBlockWithName(CONTROL_BLOCK_NAME);
 
     gDebugTextPanel = (IMyTextPanel) GridTerminalSystem.GetBlockWithName(DEBUG_PANEL_NAME);
 }
@@ -102,15 +106,7 @@ public void Main(string argument) {
 double getCurrentSpeed(int decimalPlaces = DEF_DECIMAL_PLACES) {
 	if(!gIsCruising) return 0;
 
-    Vector3D currentGlobalGridPosition = Me.GetPosition(); // the position of this programmable block     
- 
-    if(currentGlobalGridPosition == gGlobalGridPosition) return 0.0; 
-         
-    double speed = ((currentGlobalGridPosition-gGlobalGridPosition)*60).Length(); // how far the PB has moved since the last run (1/60s ago)             
-    gGlobalGridPosition= currentGlobalGridPosition; // update the global variable, which will be used on the next run             
-    //speed = Math.Round(speed,decimalPlaces); //rounding the speed
-     
-    return speed;             
+	return gMainControllerBlock.GetShipSpeed();
 }   
 
 void PowerThrusters(string containingSubstring = "", bool powered = true) {
